@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Slushify 🎧</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  color:white;
+  font-family:Arial,sans-serif;
+  background:linear-gradient(135deg,#090914,#11112a,#071d2d);
+}
+
+.app{
+  max-width:1000px;
+  margin:auto;
+  padding:25px;
+}
+
+h1{
+  font-size:40px;
+  margin:0 0 5px;
+}
+
+.sub{
+  color:#888;
+  margin-bottom:25px;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:25px;
+}
+
+.player,.playlist{
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  padding:25px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+
+.cover{
+  height:280px;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:90px;
+  margin-bottom:20px;
+  background:linear-gradient(135deg,#1746ff,#00d4ff);
+  box-shadow:0 20px 60px rgba(0,180,255,.18);
+  transition:.3s;
+}
+
+#title{
+  font-size:27px;
+  margin:5px 0;
+}
+
+#artist{
+  color:#999;
+  margin-bottom:20px;
+}
+
+input[type=range]{
+  width:100%;
+  accent-color:#35c9ff;
+  cursor:pointer;
+}
+
+.time{
+  display:flex;
+  justify-content:space-between;
+  color:#888;
+  font-size:12px;
+  margin-top:5px;
+}
+
+.controls{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+  margin:20px 0;
+}
+
+button{
+  border:0;
+  color:white;
+  background:#25253b;
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  cursor:pointer;
+  font-size:19px;
+  transition:.2s;
+}
+
+button:hover{
+  background:#34345a;
+  transform:scale(1.06);
+}
+
+#play{
+  width:64px;
+  height:64px;
+  background:#20c9ff;
+  color:#06101a;
+  font-size:25px;
+}
+
+.playlist h2{
+  margin-top:0;
+}
+
+.song{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:13px;
+  border-radius:12px;
+  cursor:pointer;
+  margin-bottom:5px;
+  transition:.2s;
+}
+
+.song:hover,.song.active{
+  background:rgba(50,200,255,.14);
+}
+
+.num{
+  width:25px;
+  color:#777;
+}
+
+.song-info{
+  flex:1;
+}
+
+.song-title{
+  font-weight:bold;
+}
+
+.song-artist{
+  color:#888;
+  font-size:13px;
+  margin-top:3px;
+}
+
+.emoji{
+  font-size:25px;
+}
+
+.bottom{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-top:15px;
+}
+
+#volume{
+  flex:1;
+}
+
+.badge{
+  display:inline-block;
+  margin-top:10px;
+  padding:5px 9px;
+  border-radius:20px;
+  background:rgba(32,201,255,.12);
+  color:#35c9ff;
+  font-size:11px;
+}
+
+@media(max-width:750px){
+  .layout{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>🎧 Slushify</h1>
+
+<div class="sub">
+10 songs. One HTML file. Zero ads. Maximum blue slush. 🥤
+</div>
+
+<div class="layout">
+
+<!-- PLAYER -->
+<div class="player">
+
+<div class="cover" id="cover">🎵</div>
+
+<div id="title">FUNK MONOCLE</div>
+<div id="artist">Uploaded Track</div>
+
+<div class="badge" id="status">READY</div>
+
+<br><br>
+
+<input id="progress" type="range" min="0" max="100" value="0">
+
+<div class="time">
+<span id="current">0:00</span>
+<span id="duration">0:00</span>
+</div>
+
+<div class="controls">
+
+<button onclick="previous()">⏮</button>
+
+<button onclick="togglePlay()" id="play">▶</button>
+
+<button onclick="next()">⏭</button>
+
+<button onclick="shuffle()">🔀</button>
+
+</div>
+
+<div class="bottom">
+🔊
+<input id="volume"
+type="range"
+min="0"
+max="1"
+step=".01"
+value=".7">
+</div>
+
+<audio id="realAudio" preload="metadata"></audio>
+
+</div>
+
+
+<!-- PLAYLIST -->
+<div class="playlist">
+
+<h2>Your Playlist</h2>
+
+<div id="songs"></div>
+
+</div>
+
+</div>
+</div>
+
+
+<script>
+
+/* =========================
+   PLAYLIST
+========================= */
+
+const tracks=[
+
+["FUNK MONOCLE","Uploaded Track","🎵","#1746ff"],
+
+["State Fair Nights","Midway Dreams","🎡","#ff4f9a"],
+
+["Parking Lot Moon","3AM FM","🌙","#552cff"],
+
+["Curly Fry Dreams","Snack Attack","🍟","#ff8a00"],
+
+["Neon Lemonade","Fairground Kids","🍋","#ffe600"],
+
+["Ferris Wheel Funk","Cotton Candy Club","🎠","#ff3d81"],
+
+["Corn Dog Sunset","The Midway","🌭","#ff5a36"],
+
+["Blue Tongue","Slush Department","💙","#00bfff"],
+
+["After Hours","Night Ride","🌃","#6a5cff"],
+
+["Last Ride Home","County Fair Radio","🚗","#15c98a"]
+
+];
+
+
+/* =========================
+   GENERATED SONG SETTINGS
+========================= */
+
+const songs=[
+
+{bpm:108,scale:[146.83,164.81,196,220,246.94,220,196,164.81]},
+
+{bpm:124,scale:[130.81,155.56,174.61,207.65,233.08,207.65,174.61,155.56]},
+
+{bpm:88,scale:[110,130.81,146.83,164.81,196,164.81,146.83,130.81]},
+
+{bpm:118,scale:[98,123.47,146.83,164.81,196,164.81,146.83,123.47]},
+
+{bpm:132,scale:[164.81,185,220,246.94,277.18,246.94,220,185]},
+
+{bpm:115,scale:[123.47,146.83,164.81,185,220,185,164.81,146.83]},
+
+{bpm:102,scale:[130.81,146.83,174.61,196,233.08,196,174.61,146.83]},
+
+{bpm:140,scale:[146.83,174.61,196,220,261.63,220,196,174.61]},
+
+{bpm:95,scale:[110,123.47,146.83,164.81,185,164.81,146.83,123.47]},
+
+{bpm:78,scale:[98,110,130.81,146.83,164.81,146.83,130.81,110]}
+
+];
+
+
+/* =========================
+   VARIABLES
+========================= */
+
+let ctx=null;
+let master=null;
+let playing=false;
+let currentSong=0;
+let step=0;
+let timer=null;
+let songStart=0;
+let elapsed=0;
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const title=document.getElementById("title");
+const artist=document.getElementById("artist");
+const cover=document.getElementById("cover");
+const playButton=document.getElementById("play");
+const progress=document.getElementById("progress");
+const currentTime=document.getElementById("current");
+const duration=document.getElementById("duration");
+const volume=document.getElementById("volume");
+const songsBox=document.getElementById("songs");
+const realAudio=document.getElementById("realAudio");
+const status=document.getElementById("status");
+
+
+/* =========================
+   PLAYLIST UI
+========================= */
+
+tracks.forEach((t,i)=>{
+
+const div=document.createElement("div");
+
+div.className="song";
+
+div.innerHTML=`
+
+<div class="num">${i+1}</div>
+
+<div class="emoji">${t[2]}</div>
+
+<div class="song-info">
+
+<div class="song-title">
+${t[0]}
+</div>
+
+<div class="song-artist">
+${t[1]}
+</div>
+
+</div>
+
+`;
+
+div.onclick=()=>loadSong(i,true);
+
+songsBox.appendChild(div);
+
+});
+
+
+function updatePlaylist(){
+
+[...songsBox.children].forEach((x,i)=>{
+
+x.classList.toggle(
+"active",
+i===currentSong
+);
+
+});
+
+}
+
+
+/* =========================
+   AUDIO ENGINE
+========================= */
+
+function initAudio(){
+
+if(ctx)return;
+
+ctx=new AudioContext();
+
+master=ctx.createGain();
+
+master.gain.value=volume.value;
+
+master.connect(ctx.destination);
+
+}
+
+
+/* =========================
+   OSCILLATOR
+========================= */
+
+function osc(freq,time,length,type,vol){
+
+const o=ctx.createOscillator();
+
+const g=ctx.createGain();
+
+o.type=type;
+
+o.frequency.value=freq;
+
+g.gain.setValueAtTime(.0001,time);
+
+g.gain.exponentialRampToValueAtTime(
+vol,
+time+.01
+);
+
+g.gain.exponentialRampToValueAtTime(
+.0001,
+time+length
+);
+
+o.connect(g);
+
+g.connect(master);
+
+o.start(time);
+
+o.stop(time+length+.05);
+
+}
+
+
+/* =========================
+   KICK
+========================= */
+
+function kick(time){
+
+const o=ctx.createOscillator();
+
+const g=ctx.createGain();
+
+o.frequency.setValueAtTime(130,time);
+
+o.frequency.exponentialRampToValueAtTime(
+45,
+time+.13
+);
+
+g.gain.setValueAtTime(.3,time);
+
+g.gain.exponentialRampToValueAtTime(
+.001,
+time+.15
+);
+
+o.connect(g);
+
+g.connect(master);
+
+o.start(time);
+
+o.stop(time+.16);
+
+}
+
+
+/* =========================
+   SNARE
+========================= */
+
+function snare(time){
+
+const buffer=ctx.createBuffer(
+1,
+ctx.sampleRate*.12,
+ctx.sampleRate
+);
+
+const data=buffer.getChannelData(0);
+
+for(let i=0;i<data.length;i++){
+
+data[i]=(Math.random()*2-1)*
+(1-i/data.length);
+
+}
+
+const source=ctx.createBufferSource();
+
+const g=ctx.createGain();
+
+source.buffer=buffer;
+
+g.gain.value=.08;
+
+source.connect(g);
+
+g.connect(master);
+
+source.start(time);
+
+}
+
+
+/* =========================
+   GENERATED MUSIC
+========================= */
+
+function makeBeat(){
+
+const song=songs[currentSong];
+
+const now=ctx.currentTime;
+
+const note=
+song.scale[
+step%song.scale.length
+];
+
+
+/* LEAD */
+
+osc(
+note*2,
+now,
+.22,
+step%3===0?"square":"triangle",
+.055
+);
+
+
+/* BASS */
+
+if(step%2===0){
+
+osc(
+note/2,
+now,
+.35,
+"sawtooth",
+.035
+);
+
+}
+
+
+/* DRUMS */
+
+if(step%4===0)
+kick(now);
+
+if(step%4===2)
+snare(now);
+
+
+/* SPARKLE */
+
+if(step%8===7){
+
+osc(
+note*4,
+now,
+.08,
+"sine",
+.025
+);
+
+}
+
+step++;
+
+}
+
+
+/* =========================
+   START
+========================= */
+
+function start(){
+
+if(playing)return;
+
+
+/* REAL MP3 */
+
+if(currentSong===0){
+
+playing=true;
+
+playButton.textContent="⏸";
+
+status.textContent="PLAYING";
+
+realAudio.volume=
+Number(volume.value);
+
+realAudio.play().catch(()=>{
+
+playing=false;
+
+playButton.textContent="▶";
+
+status.textContent="READY";
+
+});
+
+updateRealAudioUI();
+
+return;
+
+}
+
+
+/* GENERATED MUSIC */
+
+initAudio();
+
+ctx.resume();
+
+playing=true;
+
+playButton.textContent="⏸";
+
+status.textContent="PLAYING";
+
+const bpm=songs[currentSong].bpm;
+
+const interval=
+60000/bpm/2;
+
+makeBeat();
+
+timer=setInterval(
+makeBeat,
+interval
+);
+
+songStart=
+Date.now()-
+elapsed*1000;
+
+duration.textContent="2:00";
+
+updateProgress();
+
+}
+
+
+/* =========================
+   PAUSE
+========================= */
+
+function pause(){
+
+playing=false;
+
+playButton.textContent="▶";
+
+status.textContent="PAUSED";
+
+clearInterval(timer);
+
+if(currentSong===0){
+
+realAudio.pause();
+
+elapsed=
+realAudio.currentTime||0;
+
+return;
+
+}
+
+elapsed=
+(Date.now()-songStart)/1000;
+
+}
+
+
+/* =========================
+   PLAY / PAUSE
+========================= */
+
+function togglePlay(){
+
+if(playing)
+pause();
+else
+start();
+
+}
+
+
+/* =========================
+   LOAD SONG
+========================= */
+
+function loadSong(index,auto=false){
+
+pause();
+
+currentSong=index;
+
+step=0;
+
+elapsed=0;
+
+title.textContent=
+tracks[index][0];
+
+artist.textContent=
+tracks[index][1];
+
+cover.textContent=
+tracks[index][2];
+
+cover.style.background=
+`linear-gradient(
+135deg,
+${tracks[index][3]},
+#11112b
+)`;
+
+progress.value=0;
+
+currentTime.textContent="0:00";
+
+
+/* FUNK MONOCLE */
+
+if(index===0){
+
+/*
+IMPORTANT:
+Keep FUNK_MONOCLE.mp3 in the
+same GitHub repository as index.html.
+*/
+
+realAudio.src="FUNK_MONOCLE.mp3";
+
+realAudio.currentTime=0;
+
+realAudio.load();
+
+realAudio.onloadedmetadata=()=>{
+
+duration.textContent=
+formatTime(realAudio.duration);
+
+};
+
+realAudio.onended=()=>{
+
+playing=false;
+
+playButton.textContent="▶";
+
+status.textContent="READY";
+
+next();
+
+};
+
+}
+
+/* GENERATED SONGS */
+
+else{
+
+realAudio.pause();
+
+realAudio.removeAttribute("src");
+
+realAudio.load();
+
+duration.textContent="2:00";
+
+status.textContent="READY";
+
+}
+
+updatePlaylist();
+
+if(auto)
+start();
+
+}
+
+
+/* =========================
+   NEXT
+========================= */
+
+function next(){
+
+currentSong=
+(currentSong+1)%
+tracks.length;
+
+loadSong(
+currentSong,
+true
+);
+
+}
+
+
+/* =========================
+   PREVIOUS
+========================= */
+
+function previous(){
+
+if(elapsed>5){
+
+elapsed=0;
+
+progress.value=0;
+
+if(currentSong===0)
+realAudio.currentTime=0;
+
+return;
+
+}
+
+currentSong=
+(currentSong-1+tracks.length)%
+tracks.length;
+
+loadSong(
+currentSong,
+true
+);
+
+}
+
+
+/* =========================
+   SHUFFLE
+========================= */
+
+function shuffle(){
+
+currentSong=
+Math.floor(
+Math.random()*
+tracks.length
+);
+
+loadSong(
+currentSong,
+true
+);
+
+}
+
+
+/* =========================
+   GENERATED PROGRESS
+========================= */
+
+function updateProgress(){
+
+if(!playing)return;
+
+if(currentSong===0){
+
+updateRealAudioUI();
+
+return;
+
+}
+
+elapsed=
+(Date.now()-songStart)/1000;
+
+if(elapsed>=120){
+
+next();
+
+return;
+
+}
+
+progress.value=
+(elapsed/120)*100;
+
+currentTime.textContent=
+formatTime(elapsed);
+
+requestAnimationFrame(
+updateProgress
+);
+
+}
+
+
+/* =========================
+   REAL AUDIO PROGRESS
+========================= */
+
+function updateRealAudioUI(){
+
+if(currentSong!==0)return;
+
+elapsed=
+realAudio.currentTime||0;
+
+if(realAudio.duration){
+
+progress.value=
+(elapsed/realAudio.duration)*100;
+
+duration.textContent=
+formatTime(realAudio.duration);
+
+}
+
+currentTime.textContent=
+formatTime(elapsed);
+
+if(playing)
+requestAnimationFrame(
+updateRealAudioUI
+);
+
+}
+
+
+/* =========================
+   TIME
+========================= */
+
+function formatTime(seconds){
+
+seconds=Math.floor(seconds);
+
+const m=
+Math.floor(seconds/60);
+
+const s=
+String(seconds%60)
+.padStart(2,"0");
+
+return `${m}:${s}`;
+
+}
+
+
+/* =========================
+   SEEK
+========================= */
+
+progress.addEventListener(
+"input",
+()=>{
+
+if(
+currentSong===0 &&
+realAudio.duration
+){
+
+realAudio.currentTime=
+(progress.value/100)*
+realAudio.duration;
+
+elapsed=
+realAudio.currentTime;
+
+currentTime.textContent=
+formatTime(elapsed);
+
+return;
+
+}
+
+elapsed=
+(progress.value/100)*120;
+
+currentTime.textContent=
+formatTime(elapsed);
+
+if(playing){
+
+songStart=
+Date.now()-
+elapsed*1000;
+
+}
+
+});
+
+
+/* =========================
+   VOLUME
+========================= */
+
+volume.addEventListener(
+"input",
+()=>{
+
+if(master)
+master.gain.value=
+volume.value;
+
+realAudio.volume=
+Number(volume.value);
+
+});
+
+
+/* =========================
+   INITIAL SONG
+========================= */
+
+loadSong(0,false);
+
+</script>
+
+</body>
+</html>
